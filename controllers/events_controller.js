@@ -13,15 +13,44 @@ events.get("/", async (req, res) => {
   }
 });
 
-events.get("/:id", async (req, res) => {
+events.get("/:name", async (req, res) => {
   try {
-    const foundEvent = await event.findOne({
-      where: { event_id: req.params.id },
+    const foundEvent = await Event.findOne({
+      where: { name: req.params.name },
+      include: [
+        {
+          model: MeetGreet,
+          as: "meet_greets",
+          include: {
+            model: Band,
+            as: "band",
+          },
+        },
+        {
+          model: SetTime,
+          as: "set_times",
+          include: [
+            {
+              model: Band,
+              as: "band",
+            },
+            {
+              model: Stage,
+              as: "stage",
+            },
+          ],
+        },
+        {
+          model: Stage,
+          as: "stages",
+          through: { attributes: [] },
+        },
+      ],
     });
     res.status(200).json(foundEvent);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR GETTING ONE event");
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
   }
 });
 
