@@ -1,18 +1,25 @@
 // DEPENDENCIES
 const events = require("express").Router();
 const db = require("../models");
-const { event } = db;
+const { Event, MeetGreet, SetTime, Stage, Band } = db;
+const { Op } = require("sequelize");
 
+// GET ALL THE EVENTS
 events.get("/", async (req, res) => {
   try {
-    const foundEvents = await event.findAll();
+    const foundEvents = await Event.findAll({
+      order: [["date", "ASC"]],
+      where: {
+        name: { [Op.like]: `%${req.query.name ? req.query.name : ""}%` },
+      },
+    });
     res.status(200).json(foundEvents);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR GETTING ALL EVENTS");
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
+// GET AN EVENT
 events.get("/:name", async (req, res) => {
   try {
     const foundEvent = await Event.findOne({
@@ -21,6 +28,7 @@ events.get("/:name", async (req, res) => {
         {
           model: MeetGreet,
           as: "meet_greets",
+          attributes: { exclude: ["event_id", "band_id"] },
           include: {
             model: Band,
             as: "band",
@@ -29,15 +37,10 @@ events.get("/:name", async (req, res) => {
         {
           model: SetTime,
           as: "set_times",
+          attributes: { exclude: ["event_id", "stage_id", "band_id"] },
           include: [
-            {
-              model: Band,
-              as: "band",
-            },
-            {
-              model: Stage,
-              as: "stage",
-            },
+            { model: Band, as: "band" },
+            { model: Stage, as: "stage" },
           ],
         },
         {
@@ -49,30 +52,36 @@ events.get("/:name", async (req, res) => {
     });
     res.status(200).json(foundEvent);
   } catch (error) {
-    console.log(error);
     res.status(500).json(error);
   }
 });
 
+// CREATE AN EVENT
 events.post("/", async (req, res) => {
   try {
-    const newEvent = await event.create(req.body);
-    res.status(200).json({ message: "Created a new event!", data: newevent });
+    const newEvent = await Event.create(req.body);
+    res.status(200).json({
+      message: "New event created!",
+      data: newEvent,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR CREATING A EVENT");
+    res.status(500).json(err);
   }
 });
 
+// UPDATE AN EVENT
 events.put("/:id", async (req, res) => {
   try {
     const updatedEvents = await Event.update(req.body, {
-      where: { event_id: req.params.id },
+      where: {
+        event_id: req.params.id,
+      },
     });
-    res.status(200).json({ message: `Updated ${updatedEvents} events!` });
+    res.status(200).json({
+      message: `Updated ${updatedEvents} event.`,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR GETTING ONE EVENT");
+    res.status(500).json(err);
   }
 });
 
@@ -85,12 +94,11 @@ events.delete("/:id", async (req, res) => {
       },
     });
     res.status(200).json({
-      message: `Successfully deleted ${deletedEvents} event(s)`,
+      message: `Deleted ${deletedEvents} event.`,
     });
   } catch (err) {
     res.status(500).json(err);
   }
 });
 
-// EXPORT
 module.exports = events;

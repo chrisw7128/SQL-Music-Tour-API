@@ -1,10 +1,10 @@
 // DEPENDENCIES
 const bands = require("express").Router();
 const db = require("../models");
-const { Band, MeetGreet, Event, SetTime } = db;
+const { Band, MeetGreet, SetTime, Event } = db;
 const { Op } = require("sequelize");
 
-// ENDPOINTS
+// GET THE BANDS
 bands.get("/", async (req, res) => {
   try {
     const foundBands = await Band.findAll({
@@ -14,12 +14,12 @@ bands.get("/", async (req, res) => {
       },
     });
     res.status(200).json(foundBands);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR GETTING ALL BANDS");
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
+// GET A BAND
 bands.get("/:name", async (req, res) => {
   try {
     const foundBand = await Band.findOne({
@@ -28,6 +28,7 @@ bands.get("/:name", async (req, res) => {
         {
           model: MeetGreet,
           as: "meet_greets",
+          attributes: { exclude: ["band_id", "event_id"] },
           include: {
             model: Event,
             as: "event",
@@ -41,6 +42,7 @@ bands.get("/:name", async (req, res) => {
         {
           model: SetTime,
           as: "set_times",
+          attributes: { exclude: ["band_id", "event_id"] },
           include: {
             model: Event,
             as: "event",
@@ -52,49 +54,70 @@ bands.get("/:name", async (req, res) => {
           },
         },
       ],
+      order: [
+        [
+          { model: MeetGreet, as: "meet_greets" },
+          { model: Event, as: "event" },
+          "date",
+          "DESC",
+        ],
+        [
+          { model: SetTime, as: "set_times" },
+          { model: Event, as: "event" },
+          "date",
+          "DESC",
+        ],
+      ],
     });
     res.status(200).json(foundBand);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR GETTING ONE BAND");
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
+// CREATE A BAND
 bands.post("/", async (req, res) => {
   try {
     const newBand = await Band.create(req.body);
-    res.status(200).json({ message: "Created a new band!", data: newBand });
+    res.status(200).json({
+      message: "New band created!",
+      data: newBand,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR CREATING BAND");
+    res.status(500).json(err);
   }
 });
 
+// UPDATE A BAND
 bands.put("/:id", async (req, res) => {
   try {
     const updatedBands = await Band.update(req.body, {
-      where: { band_id: req.params.id },
+      where: {
+        band_id: req.params.id,
+      },
     });
-    res.status(200).json({ message: `Updated ${updatedBands} bands!` });
+    res.status(200).json({
+      message: `Updated ${updatedBands} band.`,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR UPDATING BANDS");
+    res.status(500).json(err);
   }
 });
 
+// DELETE A BAND
 bands.delete("/:id", async (req, res) => {
   try {
-    const deletedBand = await Band.destroy({
-      where: { band_id: req.params.id },
+    const deletedBands = await Band.destroy({
+      where: {
+        band_id: req.params.id,
+      },
     });
-    res
-      .status(200)
-      .json({ message: `Successfully deleted band id ${req.params.id}!` });
+    res.status(200).json({
+      message: `Deleted ${deletedBands} band.`,
+    });
   } catch (err) {
-    console.log(err);
-    res.status(500).send("ERROR DELETING BAND");
+    res.status(500).json(err);
   }
 });
 
-// EXPORT
 module.exports = bands;
